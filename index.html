@@ -233,20 +233,18 @@
 
         <div id="final-results"></div>
 
-        <button class="btn-red" onclick="location.reload()">Resetar Sistema</button>
+        <button class="btn-red" onclick="resetarSistema()">Resetar Sistema</button>
 
     </div>
 
 </div>
 
 <script>
-    let senhaMestra = localStorage.getItem('eleicao_senha') || "";
+   let senhaMestra = localStorage.getItem('eleicao_senha') || "";
     let candidatos = JSON.parse(localStorage.getItem('eleicao_dados')) || [];
 
-    // Ao carregar a página, verifica se já existe uma eleição em andamento
     window.onload = function() {
         if (candidatos.length > 0) {
-            alert("Retomando eleição anterior...");
             montarGrade();
         }
     };
@@ -265,20 +263,25 @@
             return;
         }
 
+        // FIX: Clear the array before adding NEW candidates for a NEW election
+        candidatos = []; 
+        
         let carregados = 0;
         for (let i = 0; i < files.length; i++) {
             const reader = new FileReader();
+            // Use index to ensure unique identification even if names are similar
             const nomeLimpo = files[i].name.split('.')[0];
 
             reader.onload = function(e) {
                 candidatos.push({
+                    id: Date.now() + Math.random(), // Unique ID for safer voting
                     nome: nomeLimpo,
                     foto: e.target.result,
                     votos: 0
                 });
                 carregados++;
                 if (carregados === files.length) {
-                    salvarNoCache(); // Salva logo após configurar
+                    salvarNoCache();
                     montarGrade();
                 }
             };
@@ -290,10 +293,11 @@
         const grid = document.getElementById('grid-votos');
         grid.innerHTML = "";
         
-        candidatos.forEach(c => {
+        candidatos.forEach((c, index) => {
             const card = document.createElement('div');
             card.className = 'card';
-            card.onclick = () => registrarVoto(c.nome);
+            // Passing index is much safer than passing the name string
+            card.onclick = () => registrarVoto(index); 
             card.innerHTML = `<img src="${c.foto}">`;
             grid.appendChild(card);
         });
@@ -303,11 +307,9 @@
         document.getElementById('title').innerText = "Escolha seu Líder";
     }
 
-    function registrarVoto(nome) {
-        const index = candidatos.findIndex(c => c.nome === nome);
+    function registrarVoto(index) {
         candidatos[index].votos++;
-        
-        salvarNoCache(); // Salva o voto imediatamente no cache
+        salvarNoCache();
         
         document.getElementById('voting-area').classList.add('hidden');
         document.getElementById('security-area').classList.remove('hidden');
@@ -333,7 +335,6 @@
         const resDiv = document.getElementById('final-results');
         resDiv.innerHTML = "";
         
-        // Criar uma cópia para ordenar sem bagunçar o cache original se quiserem continuar
         let ordenados = [...candidatos].sort((a, b) => b.votos - a.votos);
         
         ordenados.forEach(c => {
@@ -352,15 +353,14 @@
         document.getElementById('result-area').classList.remove('hidden');
     }
 
-    // Função para resetar tudo de verdade
+    // This now properly clears the cache and refreshes
     function resetarSistema() {
-        if(confirm("Isso apagará TODOS os votos permanentemente. Confirma?")) {
-            localStorage.clear();
-            location.reload();
+        if(confirm("Isso apagará TODOS os votos e configurações. Confirma?")) {
+            localStorage.removeItem('eleicao_dados');
+            localStorage.removeItem('eleicao_senha');
+            location.reload(); 
         }
     }
-
-
 </script>
 
 
@@ -369,4 +369,5 @@
 </body>
 
 </html>
+
 
