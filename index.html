@@ -241,19 +241,34 @@
 
 <script>
    let senhaMestra = localStorage.getItem('eleicao_senha') || "";
-    let candidatos = JSON.parse(localStorage.getItem('eleicao_dados')) || [];
+let candidatos = JSON.parse(localStorage.getItem('eleicao_dados')) || [];
+// Nova variável para controlar o estado da tela
+let votoPendente = localStorage.getItem('eleicao_pendente') === 'true';
 
-    window.onload = function() {
-        if (candidatos.length > 0) {
+window.onload = function() {
+    if (candidatos.length > 0) {
+        // Se houver um voto que ainda não foi liberado pelo mesário
+        if (votoPendente) {
+            exibirTelaSeguranca();
+        } else {
             montarGrade();
         }
-    };
-
-    function salvarNoCache() {
-        localStorage.setItem('eleicao_dados', JSON.stringify(candidatos));
-        localStorage.setItem('eleicao_senha', senhaMestra);
     }
+};
 
+function salvarNoCache() {
+    localStorage.setItem('eleicao_dados', JSON.stringify(candidatos));
+    localStorage.setItem('eleicao_senha', senhaMestra);
+    localStorage.setItem('eleicao_pendente', votoPendente);
+}
+function exibirTelaSeguranca() {
+    document.getElementById('setup-area').classList.add('hidden');
+    document.getElementById('voting-area').classList.add('hidden');
+    document.getElementById('result-area').classList.add('hidden');
+    document.getElementById('security-area').classList.remove('hidden');
+    document.getElementById('title').innerText = "Aguardando Mesário";
+}
+    
     function processarArquivos() {
         senhaMestra = document.getElementById('admin-pass').value;
         const files = document.getElementById('file-input').files;
@@ -308,28 +323,38 @@
     }
 
     function registrarVoto(index) {
-        candidatos[index].votos++;
-        salvarNoCache();
-        
-        document.getElementById('voting-area').classList.add('hidden');
-        document.getElementById('security-area').classList.remove('hidden');
-    }
+    candidatos[index].votos++;
+    votoPendente = true; // Ativa o bloqueio
+    salvarNoCache();
+    exibirTelaSeguranca();
+}
 
-    function liberar(encerrar) {
-        const p = document.getElementById('verify-pass').value;
-        if (p !== senhaMestra) {
-            alert("Senha Incorreta!");
-            return;
-        }
-        document.getElementById('verify-pass').value = "";
-        document.getElementById('security-area').classList.add('hidden');
-
-        if (encerrar) {
-            exibirResultados();
-        } else {
-            document.getElementById('voting-area').classList.remove('hidden');
-        }
+function liberar(encerrar) {
+    const p = document.getElementById('verify-pass').value;
+    if (p !== senhaMestra) {
+        alert("Senha Incorreta!");
+        return;
     }
+    
+    votoPendente = false; // Desativa o bloqueio
+    localStorage.setItem('eleicao_pendente', false); // Salva imediatamente
+    
+    document.getElementById('verify-pass').value = "";
+    document.getElementById('security-area').classList.add('hidden');
+
+    if (encerrar) {
+        exibirResultados();
+    } else {
+        montarGrade();
+    }
+}
+
+function resetarSistema() {
+    if(confirm("Isso apagará TODOS os votos e configurações. Confirma?")) {
+        localStorage.clear(); // Limpa tudo de uma vez
+        location.reload(); 
+    }
+}
 
     function exibirResultados() {
         const resDiv = document.getElementById('final-results');
@@ -353,14 +378,6 @@
         document.getElementById('result-area').classList.remove('hidden');
     }
 
-    // This now properly clears the cache and refreshes
-    function resetarSistema() {
-        if(confirm("Isso apagará TODOS os votos e configurações. Confirma?")) {
-            localStorage.removeItem('eleicao_dados');
-            localStorage.removeItem('eleicao_senha');
-            location.reload(); 
-        }
-    }
 </script>
 
 
@@ -369,5 +386,6 @@
 </body>
 
 </html>
+
 
 
