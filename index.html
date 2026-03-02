@@ -4,247 +4,128 @@
 <html lang="pt-br">
 
 <head>
-
     <meta charset="UTF-8">
-
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
     <title>Urna Visual Local</title>
-
     <style>
-
         :root { --primary: #2563eb; --success: #16a34a; --danger: #dc2626; --bg: #f1f5f9; }
-
         body { font-family: sans-serif; background: var(--bg); display: flex; justify-content: center; padding: 20px; }
-
         .container { width: 100%; max-width: 1000px; background: white; padding: 30px; border-radius: 15px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); text-align: center; }
-
-        
-
-        /* Estilo da Grade - ATUALIZADO */
-
 .grid { 
-
     display: grid; 
-
     grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); 
-
     gap: 20px; 
-
     margin: 20px 0; 
-
 }
 
 .card { 
-
     border: 2px solid #e2e8f0; 
-
     border-radius: 12px; 
-
-    overflow: hidden; /* Isso esconde o que passa da borda */
-
+    overflow: hidden;
     cursor: pointer; 
-
     transition: 0.2s; 
-
     background: white;
-
-    /* Adicione isso para garantir que não haja espaçamento interno */
-
     padding: 0 !important; 
-
     display: flex;
-
 }
-
+        
 .card:hover { 
-
     border-color: var(--primary); 
-
     transform: scale(1.02); 
-
     box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-
 }
 
 .card img { 
-
     width: 100%; 
-
     height: 100%; /* Força a altura a ocupar o card */
-
     aspect-ratio: 1 / 1; 
-
     object-fit: cover; 
-
     pointer-events: none;
-
     display: block; /* Remove espaços em branco indesejados embaixo da imagem */
-
 }
 
-       
-
-        /* Inputs e Botões */
-
         input[type="file"] { margin: 15px 0; padding: 10px; border: 1px dashed #cbd5e1; width: 100%; border-radius: 8px; cursor: pointer; }
-
         input[type="password"] { width: 100%; padding: 12px; margin: 10px 0; border-radius: 8px; border: 1px solid #ddd; font-size: 1rem; }
-
         button { width: 100%; padding: 15px; border-radius: 8px; border: none; font-weight: bold; cursor: pointer; font-size: 1rem; transition: 0.3s; }
-
         .btn-blue { background: var(--primary); color: white; }
-
         .btn-red { background: var(--danger); color: white; margin-top: 10px; }
-
-        
-
         .hidden { display: none; }
-
         .result-row { display: flex; justify-content: space-between; padding: 12px; border-bottom: 1px solid #eee; font-size: 1.2rem; }
-
-
-
-/* Estilo para a lista de resultados final - ATUALIZADO */
-
+        
 .result-item {
-
     display: flex;
-
     align-items: center;
-
     padding: 15px;
-
     border-bottom: 1px solid #eee;
-
     font-size: 1.2rem;
-
     gap: 15px;
-
 }
 
 .result-item img {
-
     width: 60px;
-
     height: 60px;
-
     border-radius: 8px;
-
     object-fit: cover;
-
 }
 
 .result-info {
-
     display: flex;
-
     flex-direction: column;
-
     text-align: left;
-
     flex-grow: 1;
-
 }
 
 .result-name {
-
     font-weight: bold;
-
     color: #1e293b;
-
 }
 
 .result-count {
-
     color: var(--primary);
-
     font-weight: bold;
-
 }
-
-
-
     </style>
-
 </head>
-
 <body>
-
-
-
 <div class="container">
-
+    
     <h1 id="title">Configuração da Eleição</h1>
-
-
-
+    
     <div id="setup-area">
-
         <p>1. Defina a senha de segurança:</p>
-
         <input type="password" id="admin-pass" placeholder="Senha do Mesário">
-
-        
-
         <p style="margin-top:20px">2. Selecione as fotos dos candidatos (Arquivos do PC):</p>
-
         <input type="file" id="file-input" multiple accept="image/*">
-
         <div id="file-list-preview" style="font-size: 0.8rem; color: #64748b; margin-bottom: 15px;"></div>
-
-        
-
         <button class="btn-blue" onclick="processarArquivos()">Iniciar Votação</button>
-
     </div>
-
-
 
     <div id="voting-area" class="hidden">
-
         <p>Clique na sua opção:</p>
-
         <div id="grid-votos" class="grid"></div>
-
     </div>
-
-
 
     <div id="security-area" class="hidden">
-
         <h2 style="color: var(--success)">Voto Computado!</h2>
-
         <p>Por favor, informe o mesário que ja votou.:</p>
-
         <input type="password" id="verify-pass" placeholder="Senha do Mesário">
-
         <button class="btn-blue" onclick="liberar(false)">Próximo Aluno</button>
-
         <button class="btn-red" onclick="liberar(true)">Finalizar Eleição</button>
-
     </div>
-
-
 
     <div id="result-area" class="hidden">
-
         <h2>Apuração dos Votos</h2>
-
         <div id="final-results"></div>
-
         <button class="btn-red" onclick="resetarSistema()">Resetar Sistema</button>
-
     </div>
-
+    
 </div>
 
 <script>
-   let senhaMestra = localStorage.getItem('eleicao_senha') || "";
-let candidatos = JSON.parse(localStorage.getItem('eleicao_dados')) || [];
-// Nova variável para controlar o estado da tela
-let votoPendente = localStorage.getItem('eleicao_pendente') === 'true';
-
+    let senhaMestra = localStorage.getItem('eleicao_senha') || "";
+    let candidatos = JSON.parse(localStorage.getItem('eleicao_dados')) || [];
+    let votoPendente = localStorage.getItem('eleicao_pendente') === 'true';
+    
 window.onload = function() {
     if (candidatos.length > 0) {
         // Se houver um voto que ainda não foi liberado pelo mesário
@@ -261,6 +142,7 @@ function salvarNoCache() {
     localStorage.setItem('eleicao_senha', senhaMestra);
     localStorage.setItem('eleicao_pendente', votoPendente);
 }
+    
 function exibirTelaSeguranca() {
     document.getElementById('setup-area').classList.add('hidden');
     document.getElementById('voting-area').classList.add('hidden');
@@ -269,60 +151,56 @@ function exibirTelaSeguranca() {
     document.getElementById('title').innerText = "Aguardando Mesário";
 }
     
-    function processarArquivos() {
-        senhaMestra = document.getElementById('admin-pass').value;
-        const files = document.getElementById('file-input').files;
-
-        if (!senhaMestra || files.length === 0) {
-            alert("Defina uma senha e selecione ao menos uma foto!");
-            return;
-        }
-
-        // FIX: Clear the array before adding NEW candidates for a NEW election
-        candidatos = []; 
-        
-        let carregados = 0;
-        for (let i = 0; i < files.length; i++) {
-            const reader = new FileReader();
-            // Use index to ensure unique identification even if names are similar
-            const nomeLimpo = files[i].name.split('.')[0];
-
-            reader.onload = function(e) {
-                candidatos.push({
-                    id: Date.now() + Math.random(), // Unique ID for safer voting
-                    nome: nomeLimpo,
-                    foto: e.target.result,
-                    votos: 0
-                });
-                carregados++;
-                if (carregados === files.length) {
-                    salvarNoCache();
-                    montarGrade();
-                }
-            };
-            reader.readAsDataURL(files[i]);
-        }
+function processarArquivos() {
+    senhaMestra = document.getElementById('admin-pass').value;
+    const files = document.getElementById('file-input').files;
+    if (!senhaMestra || files.length === 0) {
+        alert("Defina uma senha e selecione ao menos uma foto!");
+        return;
     }
+    
+    candidatos = [];     
+    let carregados = 0;
+    for (let i = 0; i < files.length; i++) {
+        const reader = new FileReader();
+        const nomeLimpo = files[i].name.split('.')[0];
 
-    function montarGrade() {
-        const grid = document.getElementById('grid-votos');
-        grid.innerHTML = "";
-        
-        candidatos.forEach((c, index) => {
-            const card = document.createElement('div');
-            card.className = 'card';
-            // Passing index is much safer than passing the name string
-            card.onclick = () => registrarVoto(index); 
-            card.innerHTML = `<img src="${c.foto}">`;
-            grid.appendChild(card);
-        });
-
-        document.getElementById('setup-area').classList.add('hidden');
-        document.getElementById('voting-area').classList.remove('hidden');
-        document.getElementById('title').innerText = "Escolha seu Líder";
+        reader.onload = function(e) {
+            candidatos.push({
+                id: Date.now() + Math.random(), // Unique ID for safer voting
+                nome: nomeLimpo,
+                foto: e.target.result,
+                votos: 0
+            });
+            carregados++;
+            if (carregados === files.length) {
+                salvarNoCache();
+                montarGrade();
+            }
+        };
+        reader.readAsDataURL(files[i]);
     }
+}
 
-    function registrarVoto(index) {
+function montarGrade() {
+    const grid = document.getElementById('grid-votos');
+    grid.innerHTML = "";
+    
+    candidatos.forEach((c, index) => {
+        const card = document.createElement('div');
+        card.className = 'card';
+        // Passing index is much safer than passing the name string
+        card.onclick = () => registrarVoto(index); 
+        card.innerHTML = `<img src="${c.foto}">`;
+        grid.appendChild(card);
+    });
+
+    document.getElementById('setup-area').classList.add('hidden');
+    document.getElementById('voting-area').classList.remove('hidden');
+    document.getElementById('title').innerText = "Escolha seu Líder";
+}
+
+function registrarVoto(index) {
     candidatos[index].votos++;
     votoPendente = true; // Ativa o bloqueio
     salvarNoCache();
@@ -356,36 +234,28 @@ function resetarSistema() {
     }
 }
 
-    function exibirResultados() {
-        const resDiv = document.getElementById('final-results');
-        resDiv.innerHTML = "";
-        
-        let ordenados = [...candidatos].sort((a, b) => b.votos - a.votos);
-        
-        ordenados.forEach(c => {
-            resDiv.innerHTML += `
-                <div class="result-item">
-                    <img src="${c.foto}">
-                    <div class="result-info">
-                        <span class="result-name">${c.nome}</span>
-                        <span class="result-count">${c.votos} voto(s)</span>
-                    </div>
+function exibirResultados() {
+    const resDiv = document.getElementById('final-results');
+    resDiv.innerHTML = "";
+    
+    let ordenados = [...candidatos].sort((a, b) => b.votos - a.votos);
+    
+    ordenados.forEach(c => {
+        resDiv.innerHTML += `
+            <div class="result-item">
+                <img src="${c.foto}">
+                <div class="result-info">
+                    <span class="result-name">${c.nome}</span>
+                    <span class="result-count">${c.votos} voto(s)</span>
                 </div>
-            `;
-        });
+            </div>
+        `;
+    });
 
-        document.getElementById('title').innerText = "Resultado Final";
-        document.getElementById('result-area').classList.remove('hidden');
-    }
+    document.getElementById('title').innerText = "Resultado Final";
+    document.getElementById('result-area').classList.remove('hidden');
+}
 
 </script>
-
-
-
-
 </body>
-
 </html>
-
-
-
